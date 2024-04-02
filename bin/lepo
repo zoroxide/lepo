@@ -1,0 +1,81 @@
+#!/usr/bin/env node
+
+const fs = require('fs');
+const path = require('path');
+const { execSync } = require('child_process');
+
+// Get the absolute path of the current working directory
+const cwd = process.cwd();
+
+// Check if the current working directory is within the lepo_frontend_framework directory
+if (!cwd.endsWith('lepo_frontend_framework')) {
+  console.error('Error: You must run the command within the lepo_frontend_framework directory.');
+  process.exit(1); // Exit the process with an error code
+}
+
+// CLI command to install dependencies and create a new project
+if (process.argv[2] === 'install') {
+  setupProject();
+} else if (process.argv[2] === 'create' && process.argv[3] === 'new' && process.argv[4] === 'project') {
+  const projectName = process.argv[5];
+  createNewProject(projectName);
+} else {
+  console.log('Usage: lepo install (to setup project) OR lepo create new project <project-name>');
+}
+
+// Function to setup the project
+function setupProject() {
+  // Create lib directory
+  const libDir = path.join(cwd, 'lib');
+  if (!fs.existsSync(libDir)) {
+    fs.mkdirSync(libDir);
+  }
+
+  // Create index.js in lib directory
+  const indexJSPath = path.join(libDir, 'index.js');
+  if (!fs.existsSync(indexJSPath)) {
+    fs.copyFileSync(path.join(__dirname, '..', 'lib', 'index.js'), indexJSPath);
+  }
+
+  // Create templates directory
+  const templatesDir = path.join(cwd, 'templates', 'project_template');
+  if (!fs.existsSync(templatesDir)) {
+    fs.mkdirSync(templatesDir);
+  }
+
+  // Copy template files to project directory
+  const templateFiles = fs.readdirSync(path.join(__dirname, '..', 'templates', 'project_template'));
+  templateFiles.forEach(file => {
+    const filePath = path.join(__dirname, '..', 'templates', 'project_template', file);
+    const destPath = path.join(templatesDir, file);
+    if (!fs.existsSync(destPath)) {
+      fs.copyFileSync(filePath, destPath);
+    }
+  });
+
+  // Install dependencies
+  try {
+    execSync('npm install', { cwd: templatesDir, stdio: 'inherit' });
+    console.log('Project setup completed successfully!');
+  } catch (err) {
+    console.error('Error installing dependencies:', err);
+  }
+}
+
+// Function to create a new project
+function createNewProject(projectName) {
+  const projectPath = path.join(cwd, projectName);
+  const templatePath = path.join(cwd, 'templates', 'project_template');
+
+  // Create project directory
+  fs.mkdirSync(projectPath);
+
+  // Copy template files to project directory
+  fs.readdirSync(templatePath).forEach(file => {
+    const filePath = path.join(templatePath, file);
+    const destPath = path.join(projectPath, file);
+    fs.copyFileSync(filePath, destPath);
+  });
+
+  console.log(`Project '${projectName}' created successfully!`);
+}
